@@ -1,0 +1,47 @@
+<EVENT>
+<plasectrxGatewayDN>cn=544de4aa06914073,ou=gateways,dc=plasec</plasectrxG
+atewayDN>
+<cn>38901f4a95d14013</cn>
+<plasectrxRecdate>20140610055028-0700</plasectrxRecdate>
+<plasectrxPanel date>20140610085028-0400</plasectrxPanel date>
+<plasectrxRecdateUTC>20140610125028Z</plasectrxRecdateUTC>
+<plasectrxPanel dateUTC>20140610125028Z</plasectrxPanel dateUTC>
+<plasectrxLastacc>19700101000000Z</plasectrxLastacc>
+<plasectrxEvtypename>Intrusion</plasectrxEvtypename>
+<plasectrxBackgroundColor></plasectrxBackgroundColor>
+<plasectrxForegroundColor></plasectrxForegroundColor>
+<plasectrxAckBackgroundColor></plasectrxAckBackgroundColor>
+<plasectrxAckForegroundColor></plasectrxAckForegroundColor>
+<plasectrxEventname>Input point in alarm</plasectrxEventname>
+<plasectrxPanel name>elevator test</plasectrxPanel name>
+<plasectrxSourcename>Input on subpanel 0 Address 1</plasectrxSourcename>
+<plasectrxSourcelocation></plasectrxSourcelocation>
+<plasectrxSourcealtname></plasectrxSourcealtname>
+<plasectrxPointaddress> 750</plasectrxPointaddress>
+<plasectrxPointDN>cn=750,ou=points,dc=plasec</plasectrxPointDN>
+<plasectrxEvtypeaddress> 5</plasectrxEvtypeaddress>
+<plasectrxSourceDN>cn=100,cn=0,cn=9,ou=panels,cn=544de4aa06914073,ou=gate
+ways,dc=plasec
+</plasectrxSourceDN>
+<plasectrxSourcetype>40</plasectrxSourcetype>
+<plasectrxOperatorname></plasectrxOperatorname>
+<plasectrxPri>10</plasectrxPri>
+<plasectrxMsg></plasectrxMsg>
+<plasectrxIdentityDN></plasectrxIdentityDN>
+<plasectrxCardno> 0</plasectrxCardno>
+<plasectrxEmbossedno></plasectrxEmbossedno>
+<plasectrxLname></plasectrxLname>
+<plasectrxFname></plasectrxFname>
+<plasectrxMi></plasectrxMi>
+<plasectrxIssuelevel> -1</plasectrxIssuelevel>
+<plasectrxFacilityCode>0</plasectrxFacilityCode>
+<plasectrxExpiredat>19700101000000Z</plasectrxExpiredat>
+<plasectrxActivdat>19700101000000Z</plasectrxActivdat>
+<plasectrxIssuedat>19700101000000Z</plasectrxIssuedat>
+<plasectrxHasCamera>0</plasectrxHasCamera>
+<plasectrxHasNotes>0</plasectrxHasNotes>
+<plasectrxHasSoftTriggerSet>0</plasectrxHasSoftTriggerSet>
+<plasectrxShowVideo>0</plasectrxShowVideo>
+<plasectrxSeqno>0</plasectrxSeqno>
+<plasectrxIsAlarm>1</plasectrxIsAlarm>
+</EVENT>

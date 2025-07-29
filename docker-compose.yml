@@ -1,0 +1,94 @@
+# Secure deployment example for Daikin XML Listener
+version: '3.8'
+
+services:
+  xml-listener:
+    image: xml-stream-aggregator:latest
+    container_name: xml-listener
+    restart: unless-stopped
+    
+    # Network configuration
+    networks:
+      - internal
+    ports:
+      # Bind only to localhost - use a reverse proxy or firewall for external access
+      - "127.0.0.1:8080:8080"
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /app/data:mode=1777,size=100M
+    
+    # Environment variables
+    environment:
+      # Network settings
+      BIND_HOST: "0.0.0.0"  # Inside container, bind to all interfaces
+      PORT: 8080
+      
+      # Security settings
+      MAX_CONNECTIONS: 10  # Limit concurrent connections
+      MAX_MESSAGE_SIZE: 1048576  # 1MB max message size
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_WINDOW: 60  # seconds
+      RATE_LIMIT_MAX_EVENTS: 1000  # max events per window
+      
+      # S3 Configuration (use secrets in production)
+      BUCKET_NAME: ${BUCKET_NAME}
+      PREFIX: "xml-events/"
+      AWS_REGION: ${AWS_REGION}
+      
+      # File management
+      ROTATION_INTERVAL: 3600  # 1 hour
+      MAX_FILE_SIZE: 10485760  # 10MB
+      OUTPUT_FORMAT: "xml"  # or "json"
+      
+      # Paths (using tmpfs)
+      CURRENT_FILE: "/app/data/current.xml"
+      TEMP_FILE: "/app/data/temp.xml"
+    
+    # Use secrets for sensitive data (create these separately)
+    secrets:
+      - aws_access_key_id
+      - aws_secret_access_key
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect(('localhost', 8080)); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Networks
+networks:
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Secrets (create these files with proper permissions)
+secrets:
+  aws_access_key_id:
+    file: ./secrets/aws_access_key_id.txt
+  aws_secret_access_key:
+    file: ./secrets/aws_secret_access_key.txt
