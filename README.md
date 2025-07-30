@@ -400,12 +400,20 @@ If XML validation is failing:
 
 ```
 Daikin XML Listener/
-├── server.py              # Main middleware script
+├── src/                   # Source code
+│   ├── server.py          # Main middleware script
+│   ├── requirements.txt   # Python dependencies
+│   ├── generate_test_events.py  # Test event generator
+│   └── test_server.py     # Test server
+├── docs/                  # Documentation
+│   ├── design/            # Design documents
+│   └── reference/         # Reference documentation
+├── scripts/               # Utility scripts
+├── docker/                # Docker configurations
 ├── Dockerfile             # Container definition
-├── requirements.txt       # Python dependencies
 ├── README.md              # This documentation
-└── Reference Docs/        # Reference documentation
-    └── XML Events Collaboration.pdf  # ACM XML format reference
+├── QUICKSTART.md          # Quick start guide
+└── LICENSE                # License file
 ```
 
 ### Running Tests
@@ -429,8 +437,8 @@ nc localhost 8080 < tests/sample_event.xml
 
 For detailed design information, see the following documents:
 
-- [TCP Server Design](tcp_server_design.md)
-- [File Management Design](file_management_design.md)
-- [S3 Upload Design](s3_upload_design.md)
-- [JSON Conversion Design](json_conversion_design.md)
-- [Dockerfile Design](dockerfile_design.md)
+- [TCP Server Design](docs/design/tcp_server_design.md)
+- [File Management Design](docs/design/file_management_design.md)
+- [S3 Upload Design](docs/design/s3_upload_design.md)
+- [JSON Conversion Design](docs/design/json_conversion_design.md)
+- [Dockerfile Design](docs/design/dockerfile_design.md)

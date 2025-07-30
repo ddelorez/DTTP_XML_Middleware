@@ -10,13 +10,13 @@ LABEL description="Middleware to aggregate XML event streams from Avigilon ACM t
 WORKDIR /app
 
 # Copy only the requirements file first to leverage Docker cache
-COPY requirements.txt .
+COPY src/requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY server.py .
+COPY src/server.py .
 
 # Create non-root user and directories
 RUN useradd -r -u 1001 -g root appuser && \

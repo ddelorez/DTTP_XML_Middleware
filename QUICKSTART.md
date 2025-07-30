@@ -135,23 +135,23 @@ docker logs -f xml-listener
 
 ```bash
 # Make the script executable
-chmod +x generate_test_events.py
+chmod +x src/generate_test_events.py
 
 # Send 10 test events
-python3 generate_test_events.py --count 10
+python3 src/generate_test_events.py --count 10
 
 # Send alarm events continuously
-python3 generate_test_events.py --count 100 --interval 0.5 --type alarm
+python3 src/generate_test_events.py --count 100 --interval 0.5 --type alarm
 ```
 
 ### Option 2: Use the Validation Script
 
 ```bash
 # Make the script executable
-chmod +x validate.sh
+chmod +x scripts/validate.sh
 
 # Run validation
-./validate.sh
+./scripts/validate.sh
 ```
 
 ### Option 3: Manual Test with netcat
