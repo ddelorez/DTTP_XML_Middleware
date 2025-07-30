@@ -19,7 +19,73 @@ cd "Daikin XML Listener"
 docker build -t xml-stream-aggregator .
 ```
 
-## Step 2: Set Environment Variables
+## Option 1: Using Docker Compose (Recommended)
+
+Docker Compose simplifies environment variable configuration and provides additional security features.
+
+### Step 2a: Create Environment File
+
+Create a `.env` file in the project directory:
+
+```bash
+# Create .env file
+cat > .env << EOF
+# Required S3 Configuration
+BUCKET_NAME=your-s3-bucket-name
+AWS_REGION=us-west-2
+
+# For quick testing (not recommended for production)
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+
+# Optional Configuration
+OUTPUT_FORMAT=xml
+ROTATION_INTERVAL=3600
+MAX_FILE_SIZE=10485760
+EOF
+```
+
+### Step 2b: Run with Docker Compose
+
+```bash
+# Start the service
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the service
+docker-compose down
+```
+
+### Step 2c: Production Setup with Secrets
+
+For production, use Docker secrets instead of environment variables:
+
+```bash
+# Create secrets directory
+mkdir -p secrets
+chmod 700 secrets
+
+# Store AWS credentials securely
+echo -n "your-access-key" > secrets/aws_access_key_id.txt
+echo -n "your-secret-key" > secrets/aws_secret_access_key.txt
+chmod 600 secrets/*.txt
+
+# Update .env to remove AWS credentials
+cat > .env << EOF
+BUCKET_NAME=your-s3-bucket-name
+AWS_REGION=us-west-2
+OUTPUT_FORMAT=xml
+EOF
+
+# Run with secrets
+docker-compose up -d
+```
+
+## Option 2: Using Docker Run
+
+### Step 2: Set Environment Variables
 
 ```bash
 # Required environment variables
@@ -32,7 +98,7 @@ export AWS_REGION=us-west-2  # or your preferred region
 export OUTPUT_FORMAT=json
 ```
 
-## Step 3: Run the Container
+### Step 3: Run the Container
 
 ```bash
 # Run the middleware container
@@ -117,6 +183,22 @@ cat test-download.xml
 | PREFIX | S3 key prefix | xml-events/ |
 | USE_DATE_FOLDERS | Organize files by date (true/false) | false |
 
+## Docker Compose vs Docker Run
+
+### Benefits of Docker Compose
+
+1. **Easier Configuration**: All settings in one `.env` file
+2. **Security Features**: Built-in resource limits, read-only filesystem
+3. **Health Checks**: Automatic container health monitoring
+4. **Networking**: Isolated internal network
+5. **Secrets Management**: Secure credential handling
+6. **Simpler Commands**: No need for long docker run commands
+
+### When to Use Each
+
+- **Docker Compose**: Production deployments, testing with multiple configurations, enhanced security requirements
+- **Docker Run**: Quick testing, simple deployments, CI/CD pipelines
+
 ## Troubleshooting
 
 ### Container won't start
@@ -152,6 +234,22 @@ netstat -an | grep 8080
 
 # Check firewall rules
 # Ensure Docker port mapping is correct
+```
+
+### Docker Compose Issues
+```bash
+# If docker-compose command not found
+# Install Docker Compose:
+# https://docs.docker.com/compose/install/
+
+# Check if .env file is loaded
+docker-compose config
+
+# Verify environment variables
+docker-compose exec xml-listener env | grep AWS
+
+# Force rebuild after changes
+docker-compose up -d --build
 ```
 
 ## Next Steps

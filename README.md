@@ -70,7 +70,27 @@ graph TD
 
 ### Quick Installation
 
-For a quick deployment with default settings:
+#### Option 1: Using Docker Compose (Recommended)
+
+The easiest way to get started is with Docker Compose:
+
+```bash
+git clone https://github.com/your-org/daikin-xml-listener.git
+cd daikin-xml-listener
+
+# Copy and edit the environment file
+cp .env.example .env
+# Edit .env with your S3 configuration
+
+# Build and start the service
+docker-compose up -d
+```
+
+See [QUICKSTART.md](QUICKSTART.md) for detailed docker-compose instructions.
+
+#### Option 2: Using Docker Run
+
+For a quick deployment with docker run:
 
 ```bash
 git clone https://github.com/your-org/daikin-xml-listener.git
