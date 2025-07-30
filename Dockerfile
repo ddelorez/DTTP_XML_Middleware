@@ -1,5 +1,5 @@
-# Use Python 3.12 slim as the base image
-FROM python:3.12-slim
+# Use Python Alpine as the base image for security and size benefits
+FROM python:alpine
 
 # Set metadata
 LABEL maintainer="Daikin XML Listener Middleware"
@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/server.py .
 
 # Create non-root user and directories
-RUN useradd -r -u 1001 -g root appuser && \
+# Note: Alpine uses adduser instead of useradd
+RUN adduser -D -u 1001 -G root appuser && \
     mkdir -p /app/data && \
     chown -R appuser:root /app && \
     chmod -R 755 /app

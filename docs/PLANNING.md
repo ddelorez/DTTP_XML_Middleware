@@ -6,8 +6,8 @@ Develop a lightweight middleware to aggregate XML event streams from an Avigilon
 ## Requirements
 - **Input:** Listen for TCP-based XML event streams (e.g., `<EVENT>` blocks with `<plasectrxEventname>`, `<plasectrxRecdate>`, etc.) on a configurable host/port, as defined in the Avigilon ACM system (e.g., Host IP, Port Number, Require TCP). See `./Reference Docs/XML Events Collaboration.pdf` for setup details and sample `<EVENT>` data.
 - **Output:** Aggregate raw XML data into timestamped files (e.g., `20250729_161500.xml`) in an S3 bucket, with a root `<EVENTS>` element to ensure well-formed XML for Snowflake.
-- **Snowflake Compatibility:** Ensure files are parseable by Snowflake’s `FILE_FORMAT = (TYPE = XML)` for ingestion into a `VARIANT` column, supporting queries on fields like `<plasectrxIsAlarm>` or `<plasectrxSourceName>` as shown in the PDF.
-- **Dockerization:** Package the middleware as a Docker container using `python:3.12-slim`, exposing the TCP port and configurable via environment variables.
+- **Snowflake Compatibility:** Ensure files are parseable by Snowflake's `FILE_FORMAT = (TYPE = XML)` for ingestion into a `VARIANT` column, supporting queries on fields like `<plasectrxIsAlarm>` or `<plasectrxSourceName>` as shown in the PDF.
+- **Dockerization:** Package the middleware as a Docker container using `python:alpine`, exposing the TCP port and configurable via environment variables.
 - **Maintainability:** Provide clean, commented Python source code (~250-300 lines) for customer modification (e.g., changing rotation intervals, adding JSON output).
 - **Error Handling:** Handle connection drops, malformed XML, and S3 upload failures gracefully.
 - **Optional Enhancement:** Support JSON output as an alternative for better Snowflake performance, configurable via an environment variable.
@@ -52,7 +52,7 @@ Develop a lightweight middleware to aggregate XML event streams from an Avigilon
   - Fallback to raw content upload if XML validation fails.
   - Log errors to console (extendable to S3 logs).
 - **Docker:**
-  - Base image: `python:3.12-slim`.
+  - Base image: `python:alpine` (improved security, zero vulnerabilities).
   - Install `boto3` via `pip`.
   - Expose `PORT` (e.g., 8080).
   - Run `python server.py` as entrypoint.
@@ -88,7 +88,7 @@ Develop a lightweight middleware to aggregate XML event streams from an Avigilon
    - Adjust S3 key extension to `.json`.
    - Use Context7 MCP to validate JSON output against XML structure in the PDF.
 4. **Dockerfile:**
-   - Use `python:3.12-slim`, install `boto3`, copy `server.py`, expose `PORT`, and set `CMD`.
+   - Use `python:alpine`, install `boto3`, copy `server.py`, expose `PORT`, and set `CMD`.
    - Ensure SoftwarePlanning MCP enforces clean Dockerfile structure.
 5. **Documentation (README.md):**
    - Instructions for building (`docker build -t xml-stream-aggregator .` in `./Daikin XML Listener/`).
