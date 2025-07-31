@@ -500,7 +500,7 @@ class FileManager:
     
     def rotate_file(self):
         """Rotate the current file, wrap in EVENTS tags, and upload to S3."""
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         
         try:
             # Acquire lock to prevent TCP server from writing during rotation

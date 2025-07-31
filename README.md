@@ -162,6 +162,37 @@ The middleware is configured through environment variables:
 | USE_DATE_FOLDERS | Organize files in date-based folders | false | No |
 | PRETTY_PRINT_JSON | Format JSON with indentation | true | No |
 
+### AWS IAM Permissions
+
+The AWS credentials must have the following S3 permissions:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::your-bucket-name"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::your-bucket-name/*"
+        }
+    ]
+}
+```
+
+**Minimum Required Permissions:**
+- `s3:ListBucket` - To verify bucket exists on startup
+- `s3:PutObject` - To upload rotated event files
+
 ### Security Settings
 
 | Variable | Description | Default | Required |

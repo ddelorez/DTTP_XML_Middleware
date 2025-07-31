@@ -119,7 +119,9 @@ def send_events(host, port, count, interval, event_type, burst_size=1):
         
         # Send events
         events_sent = 0
-        while events_sent < count:
+        connection_closed = False
+        
+        while events_sent < count and not connection_closed:
             # Send a burst of events
             burst_count = min(burst_size, count - events_sent)
             for _ in range(burst_count):
@@ -130,14 +132,16 @@ def send_events(host, port, count, interval, event_type, burst_size=1):
                 except BrokenPipeError:
                     print(f"\nConnection closed by server after {events_sent} events")
                     print("This may be due to rate limiting or file rotation")
+                    connection_closed = True
                     break
                 except socket.error as e:
                     print(f"\nSocket error after {events_sent} events: {e}")
+                    connection_closed = True
                     break
                 
             print(f"Sent {events_sent}/{count} events ({event_type})")
             
-            if events_sent < count:  # Don't sleep after the last burst
+            if events_sent < count and not connection_closed:  # Don't sleep after the last burst or if connection closed
                 time.sleep(interval)
                 
         client.close()
@@ -150,11 +154,11 @@ def send_events(host, port, count, interval, event_type, burst_size=1):
         
         if events_sent < count:
             print(f"\nNote: Only {events_sent} of {count} events were sent.")
-            print("Tips for testing:")
-            print("- Check server logs: docker logs xml-listener")
-            print("- Reduce burst size: --burst 10")
-            print("- Increase interval: --interval 0.5")
-            print("- Check rate limits in .env file")
+            print("This is likely because the server triggered file rotation.")
+            print("\nNext steps:")
+            print("1. Check server logs: docker logs xml-listener --tail 50")
+            print("2. Check S3 bucket for uploaded files")
+            print("3. For more events, try smaller bursts: --count 200 --burst 10 --interval 0.5")
         
     except ConnectionRefusedError:
         print(f"Error: Connection refused. Is the server running on {host}:{port}?")

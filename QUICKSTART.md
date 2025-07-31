@@ -45,6 +45,35 @@ MAX_FILE_SIZE=10485760
 EOF
 ```
 
+### AWS IAM Permission Requirements
+
+The IAM user or role used by this service requires the following S3 permissions:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowS3BucketOperations",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::your-s3-bucket-name"
+        },
+        {
+            "Sid": "AllowS3ObjectOperations",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::your-s3-bucket-name/*"
+        }
+    ]
+}
+```
+
 ### Step 2b: Run with Docker Compose
 
 ```bash
