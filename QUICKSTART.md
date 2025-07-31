@@ -60,7 +60,7 @@ docker-compose down
 
 ### Step 2c: Production Setup with Secrets
 
-For production, use secrets files and remove credentials from .env:
+For production, use docker-compose.prod.yml with secrets:
 
 ```bash
 # Create secrets directory
@@ -79,8 +79,8 @@ AWS_REGION=us-west-2
 OUTPUT_FORMAT=xml
 EOF
 
-# Run with secrets
-docker-compose up -d
+# Run with production config
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 Note: The application will automatically use secrets if available, falling back to .env variables if not. For testing, include credentials in .env; for production, use secrets and omit from .env.

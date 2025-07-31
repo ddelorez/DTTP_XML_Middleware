@@ -1,5 +1,5 @@
-# Testing configuration for Daikin XML Listener (uses .env for credentials)
-# For production, use docker-compose.prod.yml with secrets
+# Production configuration for Daikin XML Listener (uses secrets for credentials)
+# Requires secrets files in ./secrets/ - see QUICKSTART.md
 version: '3.8'
 
 services:
@@ -28,7 +28,7 @@ services:
     tmpfs:
       - /app/data:mode=1777,size=100M
     
-    # Environment variables from .env file (including credentials for testing)
+    # Environment variables from .env file (no credentials)
     environment:
       BIND_HOST: ${BIND_HOST}
       PORT: ${PORT}
@@ -40,8 +40,6 @@ services:
       BUCKET_NAME: ${BUCKET_NAME}
       PREFIX: ${PREFIX}
       AWS_REGION: ${AWS_REGION}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       ROTATION_INTERVAL: ${ROTATION_INTERVAL}
       MAX_FILE_SIZE: ${MAX_FILE_SIZE}
       OUTPUT_FORMAT: ${OUTPUT_FORMAT}
@@ -49,6 +47,11 @@ services:
       PRETTY_PRINT_JSON: ${PRETTY_PRINT_JSON}
       CURRENT_FILE: ${CURRENT_FILE}
       TEMP_FILE: ${TEMP_FILE}
+    
+    # Use secrets for credentials
+    secrets:
+      - aws_access_key_id
+      - aws_secret_access_key
     
     # Health check
     healthcheck:
@@ -72,3 +75,10 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
+
+# Secrets (create these files with proper permissions)
+secrets:
+  aws_access_key_id:
+    file: ./secrets/aws_access_key_id.txt
+  aws_secret_access_key:
+    file: ./secrets/aws_secret_access_key.txt
