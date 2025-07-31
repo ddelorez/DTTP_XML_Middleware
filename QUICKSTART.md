@@ -23,9 +23,9 @@ docker build -t xml-stream-aggregator .
 
 Docker Compose simplifies environment variable configuration and provides additional security features.
 
-### Step 2a: Create Environment File
+### Step 2a: Create Environment File for Testing
 
-Create a `.env` file in the project directory:
+For testing, include credentials in .env (not recommended for production):
 
 ```bash
 # Create .env file
@@ -34,7 +34,7 @@ cat > .env << EOF
 BUCKET_NAME=your-s3-bucket-name
 AWS_REGION=us-west-2
 
-# For quick testing (not recommended for production)
+# For quick testing only
 AWS_ACCESS_KEY_ID=your-access-key
 AWS_SECRET_ACCESS_KEY=your-secret-key
 
@@ -60,7 +60,7 @@ docker-compose down
 
 ### Step 2c: Production Setup with Secrets
 
-For production, use Docker secrets instead of environment variables:
+For production, use secrets files and remove credentials from .env:
 
 ```bash
 # Create secrets directory
@@ -72,7 +72,7 @@ echo -n "your-access-key" > secrets/aws_access_key_id.txt
 echo -n "your-secret-key" > secrets/aws_secret_access_key.txt
 chmod 600 secrets/*.txt
 
-# Update .env to remove AWS credentials
+# Create .env without credentials
 cat > .env << EOF
 BUCKET_NAME=your-s3-bucket-name
 AWS_REGION=us-west-2
@@ -82,6 +82,8 @@ EOF
 # Run with secrets
 docker-compose up -d
 ```
+
+Note: The application will automatically use secrets if available, falling back to .env variables if not. For testing, include credentials in .env; for production, use secrets and omit from .env.
 
 ## Option 2: Using Docker Run
 

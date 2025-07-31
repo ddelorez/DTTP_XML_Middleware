@@ -15,15 +15,12 @@ services:
       # Bind only to localhost - use a reverse proxy or firewall for external access
       - "127.0.0.1:8080:8080"
     
-    # Resource limits
+    # Resource limits (limits are supported, reservations require Swarm mode)
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
     
     # Security options
     security_opt:
@@ -89,9 +86,11 @@ networks:
       config:
         - subnet: 172.20.0.0/16
 
-# Secrets (create these files with proper permissions)
+# Secrets (create these files with proper permissions for production)
 secrets:
   aws_access_key_id:
     file: ./secrets/aws_access_key_id.txt
+    external: true
   aws_secret_access_key:
     file: ./secrets/aws_secret_access_key.txt
+    external: true

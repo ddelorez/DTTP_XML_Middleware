@@ -212,13 +212,19 @@ class S3Client:
         self.max_retries = int(config.get("MAX_RETRIES", 5))
         self.retry_base_delay = float(config.get("RETRY_BASE_DELAY", 1.0))
         
-        # Initialize boto3 client
+        # Initialize boto3 client with credentials fallback
         try:
             # Check for custom endpoint URL (useful for testing with minio)
             endpoint_url = config.get("AWS_ENDPOINT_URL")
             
+            # Load credentials with fallback: secrets files first, then env vars
+            access_key = self._load_credential("AWS_ACCESS_KEY_ID", "/run/secrets/aws_access_key_id")
+            secret_key = self._load_credential("AWS_SECRET_ACCESS_KEY", "/run/secrets/aws_secret_access_key")
+            
             self.s3 = boto3.client(
                 's3',
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
                 region_name=config.get("AWS_REGION"),
                 endpoint_url=endpoint_url
             )
@@ -229,6 +235,21 @@ class S3Client:
         except Exception as e:
             logger.error(f"Failed to initialize S3 client: {e}")
             raise
+    
+    def _load_credential(self, env_var: str, secret_path: str) -> str:
+        """Load credential from secret file if exists, else from environment variable."""
+        if os.path.exists(secret_path):
+            with open(secret_path, 'r') as f:
+                value = f.read().strip()
+            logger.info(f"Loaded {env_var} from secret file: {secret_path}")
+            return value
+        else:
+            value = os.environ.get(env_var)
+            if value:
+                logger.info(f"Loaded {env_var} from environment variable")
+                return value
+            else:
+                raise ValueError(f"{env_var} not found in secrets or environment variables")
     
     def check_bucket_access(self) -> bool:
         """Test S3 bucket access to validate credentials and permissions."""
