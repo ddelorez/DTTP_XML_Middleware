@@ -93,8 +93,8 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed docker-compose instructions.
 For a quick deployment with docker run:
 
 ```bash
-git clone https://github.com/your-org/daikin-xml-listener.git
-cd daikin-xml-listener
+git clone https://github.com/ddelorez/DTTP_XML_Middleware.git
+cd DTTP_XML_Middleware
 docker build -t xml-stream-aggregator .
 docker run -d \
   -p 8080:8080 \

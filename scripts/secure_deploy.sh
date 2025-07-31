@@ -80,11 +80,29 @@ cat > .env <<EOF
 # S3 Configuration
 BUCKET_NAME=${BUCKET_NAME}
 AWS_REGION=${AWS_REGION}
+PREFIX=xml-events/
+USE_DATE_FOLDERS=false
+
+# Network Configuration
+PORT=${PORT}
+BIND_HOST=0.0.0.0
 
 # Security Settings
-PORT=${PORT}
 MAX_CONNECTIONS=${MAX_CONNECTIONS}
+MAX_MESSAGE_SIZE=1048576
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_WINDOW=60
 RATE_LIMIT_MAX_EVENTS=${RATE_LIMIT}
+
+# File Management
+ROTATION_INTERVAL=3600
+MAX_FILE_SIZE=10485760
+OUTPUT_FORMAT=xml
+PRETTY_PRINT_JSON=true
+
+# File Paths (used internally by container)
+CURRENT_FILE=/app/data/current.xml
+TEMP_FILE=/app/data/temp.xml
 EOF
 chmod 600 .env
 echo -e "${GREEN}✓ Environment file created${NC}"

@@ -8,9 +8,30 @@ echo
 check_env_vars() {
     echo "Checking environment variables..."
     
+    # First check if .env file exists (docker-compose scenario)
+    if [ -f ".env" ]; then
+        echo "✓ Found .env file, loading variables..."
+        # Source the .env file to make variables available
+        set -a  # automatically export all variables
+        source .env
+        set +a  # turn off automatic export
+    fi
+    
+    # Check if docker-compose.yml exists
+    if [ -f "docker-compose.yml" ] && command -v docker-compose &> /dev/null; then
+        echo "✓ Docker Compose detected"
+        USING_COMPOSE=true
+    else
+        USING_COMPOSE=false
+    fi
+    
     if [ -z "$BUCKET_NAME" ]; then
         echo "✗ BUCKET_NAME is not set"
-        echo "  Please set: export BUCKET_NAME=your-bucket-name"
+        if [ "$USING_COMPOSE" = true ]; then
+            echo "  Please ensure BUCKET_NAME is set in your .env file"
+        else
+            echo "  Please set: export BUCKET_NAME=your-bucket-name"
+        fi
         exit 1
     else
         echo "✓ BUCKET_NAME is set: $BUCKET_NAME"
@@ -18,7 +39,11 @@ check_env_vars() {
     
     if [ -z "$AWS_REGION" ]; then
         echo "✗ AWS_REGION is not set"
-        echo "  Please set: export AWS_REGION=your-region"
+        if [ "$USING_COMPOSE" = true ]; then
+            echo "  Please ensure AWS_REGION is set in your .env file"
+        else
+            echo "  Please set: export AWS_REGION=your-region"
+        fi
         exit 1
     else
         echo "✓ AWS_REGION is set: $AWS_REGION"
@@ -35,7 +60,11 @@ check_container() {
         echo "✓ Container 'xml-listener' is running"
     else
         echo "✗ Container 'xml-listener' is not running"
-        echo "  Run: docker run -d --name xml-listener -p 8080:8080 -e BUCKET_NAME=$BUCKET_NAME -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -e AWS_REGION=$AWS_REGION xml-stream-aggregator"
+        if [ "$USING_COMPOSE" = true ]; then
+            echo "  Run: docker-compose up -d"
+        else
+            echo "  Run: docker run -d --name xml-listener -p 8080:8080 -e BUCKET_NAME=$BUCKET_NAME -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -e AWS_REGION=$AWS_REGION xml-stream-aggregator"
+        fi
         exit 1
     fi
     
