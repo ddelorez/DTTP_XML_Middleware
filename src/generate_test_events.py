@@ -9,11 +9,11 @@ import socket
 import time
 import random
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 
 def generate_event(event_type="random"):
     """Generate a sample XML event."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     timestamp = now.strftime("%Y%m%d%H%M%S")
     timestamp_utc = f"{timestamp}Z"
     
@@ -124,8 +124,16 @@ def send_events(host, port, count, interval, event_type, burst_size=1):
             burst_count = min(burst_size, count - events_sent)
             for _ in range(burst_count):
                 event = generate_event(event_type)
-                client.sendall(event.encode())
-                events_sent += 1
+                try:
+                    client.sendall(event.encode())
+                    events_sent += 1
+                except BrokenPipeError:
+                    print(f"\nConnection closed by server after {events_sent} events")
+                    print("This may be due to rate limiting or file rotation")
+                    break
+                except socket.error as e:
+                    print(f"\nSocket error after {events_sent} events: {e}")
+                    break
                 
             print(f"Sent {events_sent}/{count} events ({event_type})")
             
@@ -137,8 +145,16 @@ def send_events(host, port, count, interval, event_type, burst_size=1):
         
         # Calculate approximate data sent
         avg_event_size = len(generate_event(event_type))
-        total_size = avg_event_size * count
+        total_size = avg_event_size * events_sent  # Use actual events sent
         print(f"Approximate data sent: {total_size:,} bytes ({total_size/1024:.1f} KB)")
+        
+        if events_sent < count:
+            print(f"\nNote: Only {events_sent} of {count} events were sent.")
+            print("Tips for testing:")
+            print("- Check server logs: docker logs xml-listener")
+            print("- Reduce burst size: --burst 10")
+            print("- Increase interval: --interval 0.5")
+            print("- Check rate limits in .env file")
         
     except ConnectionRefusedError:
         print(f"Error: Connection refused. Is the server running on {host}:{port}?")
