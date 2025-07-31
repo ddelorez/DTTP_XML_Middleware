@@ -1,4 +1,5 @@
 # Secure deployment example for Daikin XML Listener
+# This file requires a .env file with environment variables (see .env.example)
 version: '3.8'
 
 services:
@@ -31,32 +32,34 @@ services:
     tmpfs:
       - /app/data:mode=1777,size=100M
     
-    # Environment variables
+    # Environment variables from .env file
     environment:
       # Network settings
-      BIND_HOST: "0.0.0.0"  # Inside container, bind to all interfaces
-      PORT: 8080
+      BIND_HOST: ${BIND_HOST}
+      PORT: ${PORT}
       
       # Security settings
-      MAX_CONNECTIONS: 10  # Limit concurrent connections
-      MAX_MESSAGE_SIZE: 1048576  # 1MB max message size
-      RATE_LIMIT_ENABLED: "true"
-      RATE_LIMIT_WINDOW: 60  # seconds
-      RATE_LIMIT_MAX_EVENTS: 1000  # max events per window
+      MAX_CONNECTIONS: ${MAX_CONNECTIONS}
+      MAX_MESSAGE_SIZE: ${MAX_MESSAGE_SIZE}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW}
+      RATE_LIMIT_MAX_EVENTS: ${RATE_LIMIT_MAX_EVENTS}
       
       # S3 Configuration (use secrets in production)
       BUCKET_NAME: ${BUCKET_NAME}
-      PREFIX: "xml-events/"
+      PREFIX: ${PREFIX}
       AWS_REGION: ${AWS_REGION}
       
       # File management
-      ROTATION_INTERVAL: 3600  # 1 hour
-      MAX_FILE_SIZE: 10485760  # 10MB
-      OUTPUT_FORMAT: "xml"  # or "json"
+      ROTATION_INTERVAL: ${ROTATION_INTERVAL}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      OUTPUT_FORMAT: ${OUTPUT_FORMAT}
+      USE_DATE_FOLDERS: ${USE_DATE_FOLDERS}
+      PRETTY_PRINT_JSON: ${PRETTY_PRINT_JSON}
       
       # Paths (using tmpfs)
-      CURRENT_FILE: "/app/data/current.xml"
-      TEMP_FILE: "/app/data/temp.xml"
+      CURRENT_FILE: ${CURRENT_FILE}
+      TEMP_FILE: ${TEMP_FILE}
     
     # Use secrets for sensitive data (create these separately)
     secrets:
