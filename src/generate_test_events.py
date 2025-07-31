@@ -104,7 +104,7 @@ def generate_event(event_type="random"):
     
     return event
 
-def send_events(host, port, count, interval, event_type):
+def send_events(host, port, count, interval, event_type, burst_size=1):
     """Send events to the TCP server."""
     try:
         # Connect to server
@@ -112,20 +112,33 @@ def send_events(host, port, count, interval, event_type):
         client.connect((host, port))
         
         print(f"Connected to {host}:{port}")
-        print(f"Sending {count} events at {interval}s intervals")
+        if burst_size > 1:
+            print(f"Sending {count} events in bursts of {burst_size} at {interval}s intervals")
+        else:
+            print(f"Sending {count} events at {interval}s intervals")
         
         # Send events
-        for i in range(count):
-            event = generate_event(event_type)
-            client.sendall(event.encode())
+        events_sent = 0
+        while events_sent < count:
+            # Send a burst of events
+            burst_count = min(burst_size, count - events_sent)
+            for _ in range(burst_count):
+                event = generate_event(event_type)
+                client.sendall(event.encode())
+                events_sent += 1
+                
+            print(f"Sent {events_sent}/{count} events ({event_type})")
             
-            print(f"Sent event {i+1}/{count} ({event_type})")
-            
-            if i < count - 1:  # Don't sleep after the last event
+            if events_sent < count:  # Don't sleep after the last burst
                 time.sleep(interval)
                 
         client.close()
         print("Done sending events")
+        
+        # Calculate approximate data sent
+        avg_event_size = len(generate_event(event_type))
+        total_size = avg_event_size * count
+        print(f"Approximate data sent: {total_size:,} bytes ({total_size/1024:.1f} KB)")
         
     except ConnectionRefusedError:
         print(f"Error: Connection refused. Is the server running on {host}:{port}?")
@@ -138,12 +151,23 @@ def main():
     parser.add_argument("--host", default="localhost", help="Server hostname")
     parser.add_argument("--port", type=int, default=8080, help="Server port")
     parser.add_argument("--count", type=int, default=10, help="Number of events to send")
-    parser.add_argument("--interval", type=float, default=1.0, help="Interval between events (seconds)")
-    parser.add_argument("--type", choices=["random", "alarm", "access_granted", "access_denied"], 
+    parser.add_argument("--interval", type=float, default=1.0, help="Interval between events/bursts (seconds)")
+    parser.add_argument("--type", choices=["random", "alarm", "access_granted", "access_denied"],
                         default="random", help="Event type")
+    parser.add_argument("--burst", type=int, default=1, help="Number of events to send in each burst")
+    parser.add_argument("--quick-test", action="store_true",
+                        help="Quick test mode: sends 1000 events in bursts of 100 with 0.1s intervals")
     
     args = parser.parse_args()
-    send_events(args.host, args.port, args.count, args.interval, args.type)
+    
+    # Override settings for quick test mode
+    if args.quick_test:
+        args.count = 1000
+        args.burst = 100
+        args.interval = 0.1
+        print("Quick test mode: sending 1000 events to trigger S3 upload")
+    
+    send_events(args.host, args.port, args.count, args.interval, args.type, args.burst)
 
 if __name__ == "__main__":
     main()

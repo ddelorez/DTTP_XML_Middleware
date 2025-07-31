@@ -144,6 +144,18 @@ python3 src/generate_test_events.py --count 10
 
 # Send alarm events continuously
 python3 src/generate_test_events.py --count 100 --interval 0.5 --type alarm
+
+# Quick test to trigger S3 upload (sends 1000 events rapidly)
+python3 src/generate_test_events.py --quick-test
+
+# Custom burst mode (send 500 events in bursts of 50)
+python3 src/generate_test_events.py --count 500 --burst 50 --interval 0.2
+```
+
+**Tip for Testing S3 Uploads:** To trigger file rotation and S3 upload more quickly during testing, set these values in your .env file:
+```
+ROTATION_INTERVAL=60        # Rotate every minute instead of hourly
+MAX_FILE_SIZE=10240         # Rotate at 10KB instead of 10MB
 ```
 
 ### Option 2: Use the Validation Script
