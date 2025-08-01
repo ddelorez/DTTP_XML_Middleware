@@ -181,13 +181,37 @@ python3 src/generate_test_events.py --quick-test
 python3 src/generate_test_events.py --count 500 --burst 50 --interval 0.2
 ```
 
+### Option 2: Test Event Logging
+
+Use the logging test script to verify event tracking:
+
+```bash
+# Make the script executable
+chmod +x src/test_logging.py
+
+# Run the logging test
+python3 src/test_logging.py
+
+# Monitor the server logs in another terminal
+docker logs -f xml-listener | grep "Received XML event"
+```
+
+You should see output like:
+```
+2025-08-01 12:30:45 - INFO - Received XML event from ACM (127.0.0.1) - Total event count: 1
+2025-08-01 12:30:46 - INFO - Received XML event from ACM (127.0.0.1) - Total event count: 2
+...
+2025-08-01 12:31:00 - INFO - Starting file rotation - Total events to upload: 25
+2025-08-01 12:31:02 - INFO - File rotated and uploaded successfully: 20250801_123100.xml - Events uploaded: 25
+```
+
 **Tip for Testing S3 Uploads:** To trigger file rotation and S3 upload more quickly during testing, set these values in your .env file:
 ```
 ROTATION_INTERVAL=60        # Rotate every minute instead of hourly
 MAX_FILE_SIZE=10240         # Rotate at 10KB instead of 10MB
 ```
 
-### Option 2: Use the Validation Script
+### Option 3: Use the Validation Script
 
 ```bash
 # Make the script executable
@@ -197,7 +221,7 @@ chmod +x scripts/validate.sh
 ./scripts/validate.sh
 ```
 
-### Option 3: Manual Test with netcat
+### Option 4: Manual Test with netcat
 
 ```bash
 # Send a single test event
@@ -214,6 +238,29 @@ aws s3 ls s3://$BUCKET_NAME/xml-events/
 aws s3 cp s3://$BUCKET_NAME/xml-events/20250729_123456.xml ./test-download.xml
 cat test-download.xml
 ```
+
+## Monitoring Event Reception
+
+The middleware now includes comprehensive event logging:
+
+```bash
+# Monitor incoming events in real-time
+docker logs -f xml-listener | grep "Received XML event"
+
+# Track file rotations
+docker logs -f xml-listener | grep "File rotated"
+
+# View event statistics
+docker logs xml-listener | grep -E "(Total event count|Events uploaded)"
+
+# Extract event counts for metrics
+docker logs xml-listener | grep "Total event count" | awk -F': ' '{print $NF}'
+```
+
+Log entries include:
+- **Event Reception**: Shows source IP and cumulative count
+- **File Rotation**: Shows number of events being uploaded
+- **Upload Success**: Confirms events were successfully sent to S3
 
 ## Common Configuration Options
 

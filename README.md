@@ -36,6 +36,7 @@ The middleware is designed to be:
 - **Threading**: Uses background threads for non-blocking operation
 - **Error Handling**: Graceful recovery from connection drops, malformed XML, and upload failures
 - **Logging**: Comprehensive logging for monitoring and troubleshooting
+- **Event Tracking**: Real-time logging of received XML events with cumulative count tracking
 
 ## Architecture
 
@@ -225,11 +226,27 @@ Refer to the `Reference Docs/XML Events Collaboration.pdf` for detailed setup in
    docker logs xml-listener
    ```
 
-2. Trigger an event in the ACM system (e.g., badge scan, door access)
+2. Monitor incoming events in real-time:
+   ```bash
+   docker logs -f xml-listener | grep "Received XML event"
+   ```
+   
+   You should see log entries like:
+   ```
+   2025-08-01 12:30:45 - INFO - Received XML event from ACM (192.168.1.50) - Total event count: 42
+   ```
 
-3. Verify that files are being uploaded to your S3 bucket:
+3. Trigger an event in the ACM system (e.g., badge scan, door access)
+
+4. Verify that files are being uploaded to your S3 bucket:
    ```bash
    aws s3 ls s3://your-bucket-name/xml-events/
+   ```
+   
+   File rotation logs will show:
+   ```
+   2025-08-01 13:00:00 - INFO - Starting file rotation - Total events to upload: 150
+   2025-08-01 13:00:02 - INFO - File rotated and uploaded successfully: 20250801_130000.xml - Events uploaded: 150
    ```
 
 ## Snowflake Integration
@@ -391,13 +408,35 @@ docker-compose -f docker-compose.yml up -d
 The middleware provides detailed logs suitable for monitoring:
 
 ```bash
-# View logs
+# View all logs
 docker logs -f xml-listener
 
-# Export logs to monitoring system
+# Monitor event reception
+docker logs -f xml-listener | grep "Received XML event"
+
+# Track file rotations and uploads
+docker logs -f xml-listener | grep "File rotated and uploaded"
+
+# Export error and warning logs to monitoring system
 docker logs xml-listener | grep "ERROR\|WARNING" | \
   your-log-shipper --destination monitoring-system
+
+# Monitor event throughput
+docker logs xml-listener | \
+  grep "Total event count" | \
+  awk '{print $NF}' | \
+  your-metrics-collector --metric event_count
 ```
+
+### Log Message Types
+
+The middleware generates several types of log messages:
+
+- **Event Reception**: `Received XML event from ACM (IP) - Total event count: N`
+- **File Rotation Start**: `Starting file rotation - Total events to upload: N`
+- **Upload Success**: `File rotated and uploaded successfully: filename - Events uploaded: N`
+- **Connection Info**: `Connection from IP (active: N)`
+- **Server Status**: `TCP server stopped - Total events processed in session: N`
 
 ## Troubleshooting
 

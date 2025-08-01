@@ -13,7 +13,7 @@ import time
 import logging
 import json
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 import signal
 import sys
@@ -59,6 +59,10 @@ class TCPServer:
         # Rate limiting
         self.rate_limiter = defaultdict(list)  # IP -> list of timestamps
         self.rate_limit_lock = threading.Lock()
+        
+        # Event tracking
+        self.event_count = 0
+        self.event_count_lock = threading.Lock()
         
     def start(self, file_lock: threading.Lock):
         """Start the TCP server."""
@@ -147,7 +151,12 @@ class TCPServer:
                                 f.write(event_data)
                                 f.write(b"\n")  # Add newline for readability
                         
-                        logger.debug(f"Processed event from {address}")
+                        # Increment event counter
+                        with self.event_count_lock:
+                            self.event_count += 1
+                            current_count = self.event_count
+                        
+                        logger.info(f"Received XML event from ACM ({address[0]}) - Total event count: {current_count}")
                         
                         # Update rate limiter
                         if self.rate_limit_enabled:
@@ -190,12 +199,24 @@ class TCPServer:
         with self.rate_limit_lock:
             self.rate_limiter[ip_address].append(time.time())
     
+    def get_and_reset_event_count(self) -> int:
+        """Get current event count and reset it to zero."""
+        with self.event_count_lock:
+            count = self.event_count
+            self.event_count = 0
+            return count
+    
+    def get_event_count(self) -> int:
+        """Get current event count without resetting."""
+        with self.event_count_lock:
+            return self.event_count
+    
     def stop(self):
         """Stop the TCP server."""
         self.running = False
         if self.server_socket:
             self.server_socket.close()
-        logger.info("TCP server stopped")
+        logger.info(f"TCP server stopped - Total events processed in session: {self.get_event_count()}")
 
 
 class S3Client:
@@ -446,12 +467,14 @@ class FileManager:
         self.rotation_thread = None
         self.s3_client = None
         self.format_converter = None
+        self.tcp_server = None
         
-    def start(self, file_lock: threading.Lock, s3_client: S3Client, format_converter: FormatConverter):
+    def start(self, file_lock: threading.Lock, s3_client: S3Client, format_converter: FormatConverter, tcp_server: TCPServer):
         """Start the file rotation thread."""
         self.file_lock = file_lock  # Share lock with TCP server
         self.s3_client = s3_client
         self.format_converter = format_converter
+        self.tcp_server = tcp_server
         self.running = True
         
         # Initialize empty current file if it doesn't exist
@@ -505,10 +528,15 @@ class FileManager:
         try:
             # Acquire lock to prevent TCP server from writing during rotation
             with self.file_lock:
+                # Get event count before rotation
+                event_count = self.tcp_server.get_event_count() if self.tcp_server else 0
+                
                 # Skip if file is empty
                 if not os.path.exists(self.current_file) or os.path.getsize(self.current_file) == 0:
                     logger.info("Skipping rotation for empty file")
                     return
+                
+                logger.info(f"Starting file rotation - Total events to upload: {event_count}")
                 
                 # Read current file content
                 with open(self.current_file, "rb") as f:
@@ -567,7 +595,10 @@ class FileManager:
                     if processed_file != self.temp_file and os.path.exists(processed_file):
                         os.remove(processed_file)
                     
-                    logger.info(f"File rotated and uploaded successfully: {s3_key}")
+                    # Reset event counter after successful upload
+                    events_uploaded = self.tcp_server.get_and_reset_event_count() if self.tcp_server else event_count
+                    
+                    logger.info(f"File rotated and uploaded successfully: {s3_key} - Events uploaded: {events_uploaded}")
                 else:
                     logger.error("Failed to upload rotated file to S3")
                 
@@ -627,7 +658,7 @@ def start_server():
         file_manager = FileManager(config)
         
         # Start file manager
-        file_manager.start(file_lock, s3_client, format_converter)
+        file_manager.start(file_lock, s3_client, format_converter, tcp_server)
         
         # Set up signal handlers for graceful shutdown
         def signal_handler(signum, frame):
