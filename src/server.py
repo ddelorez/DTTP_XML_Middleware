@@ -259,11 +259,24 @@ class S3Client:
                 endpoint_url=endpoint_url
             )
             
-            # Test bucket access
-            self.check_bucket_access()
-            logger.info(f"S3 client initialized for bucket: {self.bucket_name}")
+            # Test bucket access - fail fast if misconfigured
+            if not self.check_bucket_access():
+                logger.error("=" * 60)
+                logger.error("S3 CONFIGURATION FAILURE - SERVICE CANNOT START")
+                logger.error("Please fix the S3 configuration issues above")
+                logger.error("=" * 60)
+                raise ValueError("S3 bucket access validation failed")
+                
+            logger.info(f"✓ S3 client initialized successfully")
+            logger.info(f"  Bucket: {self.bucket_name}")
+            logger.info(f"  Region: {self.s3.meta.region_name}")
+            logger.info(f"  Prefix: {self.prefix}")
+        except ValueError:
+            # Re-raise validation errors
+            raise
         except Exception as e:
-            logger.error(f"Failed to initialize S3 client: {e}")
+            logger.error(f"❌ Failed to initialize S3 client: {e}")
+            logger.error("   Check your AWS credentials and network connectivity")
             raise
     
     def _load_credential(self, env_var: str, secret_path: str) -> str:
@@ -285,14 +298,34 @@ class S3Client:
         """Test S3 bucket access to validate credentials and permissions."""
         try:
             self.s3.head_bucket(Bucket=self.bucket_name)
-            logger.info(f"Successfully verified access to bucket: {self.bucket_name}")
+            logger.info(f"✓ Successfully verified access to S3 bucket: {self.bucket_name}")
             return True
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
-            logger.error(f"Failed to access bucket {self.bucket_name}: {error_code} - {str(e)}")
+            error_msg = e.response.get('Error', {}).get('Message', str(e))
+            
+            # Provide specific guidance based on error code
+            if error_code == '404' or error_code == 'NoSuchBucket':
+                logger.error(f"❌ S3 CONFIGURATION ERROR: Bucket '{self.bucket_name}' does not exist!")
+                logger.error("   Please check your BUCKET_NAME in .env file")
+            elif error_code == 'AccessDenied':
+                logger.error(f"❌ S3 PERMISSION ERROR: Access denied to bucket '{self.bucket_name}'")
+                logger.error("   Please check your AWS credentials and bucket permissions")
+                logger.error("   Required permissions: s3:ListBucket, s3:PutObject")
+            elif error_code == 'InvalidBucketName':
+                logger.error(f"❌ S3 CONFIGURATION ERROR: Invalid bucket name '{self.bucket_name}'")
+                logger.error("   Bucket names must be 3-63 characters, lowercase letters, numbers, and hyphens only")
+            elif error_code == 'RequestTimeout':
+                logger.error(f"❌ S3 CONNECTION ERROR: Timeout connecting to S3")
+                logger.error("   Please check your network connection and AWS_REGION setting")
+            else:
+                logger.error(f"❌ S3 ERROR {error_code}: {error_msg}")
+                logger.error(f"   Bucket: {self.bucket_name}, Region: {self.s3.meta.region_name}")
+            
             return False
         except Exception as e:
-            logger.error(f"Unexpected error checking bucket access: {str(e)}")
+            logger.error(f"❌ UNEXPECTED ERROR checking S3 bucket: {str(e)}")
+            logger.error("   This may indicate network issues or invalid AWS configuration")
             return False
     
     def get_s3_key(self, filename: str) -> str:

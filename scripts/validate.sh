@@ -138,6 +138,67 @@ wait_for_rotation() {
     echo
 }
 
+# Test S3 connectivity and configuration
+test_s3_connectivity() {
+    echo "Testing S3 connectivity and configuration..."
+    
+    # Check if AWS CLI is installed
+    if ! command -v aws &> /dev/null; then
+        echo "⚠ AWS CLI not found, skipping S3 connectivity test"
+        echo "  Install AWS CLI to enable S3 validation: https://aws.amazon.com/cli/"
+        return 1
+    fi
+    
+    # Test S3 bucket access
+    echo -n "  Testing access to bucket '$BUCKET_NAME' in region '$AWS_REGION'..."
+    
+    # Try to check if bucket exists
+    BUCKET_CHECK=$(aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" 2>&1)
+    
+    if [ $? -eq 0 ]; then
+        echo " ✓"
+        echo "✓ S3 bucket connectivity verified"
+        
+        # Try to list bucket to verify permissions
+        echo -n "  Testing list permissions..."
+        if aws s3 ls "s3://$BUCKET_NAME/${PREFIX:-xml-events/}" --region "$AWS_REGION" --max-items 1 &>/dev/null; then
+            echo " ✓"
+            echo "✓ S3 list permissions verified"
+        else
+            echo " ✗"
+            echo "⚠ Warning: Cannot list S3 bucket contents (may lack s3:ListBucket permission)"
+        fi
+        
+        return 0
+    else
+        echo " ✗"
+        
+        # Provide specific error guidance
+        if echo "$BUCKET_CHECK" | grep -q "NoSuchBucket"; then
+            echo "❌ ERROR: S3 bucket '$BUCKET_NAME' does not exist!"
+            echo "   Please check your BUCKET_NAME in .env file"
+        elif echo "$BUCKET_CHECK" | grep -q "AccessDenied"; then
+            echo "❌ ERROR: Access denied to S3 bucket '$BUCKET_NAME'"
+            echo "   Please check your AWS credentials have s3:ListBucket permission"
+        elif echo "$BUCKET_CHECK" | grep -q "InvalidBucketName"; then
+            echo "❌ ERROR: Invalid bucket name '$BUCKET_NAME'"
+            echo "   Bucket names must be 3-63 characters, lowercase letters, numbers, and hyphens only"
+        elif echo "$BUCKET_CHECK" | grep -q "RequestTimeout"; then
+            echo "❌ ERROR: Timeout connecting to S3"
+            echo "   Please check your network connection and AWS_REGION setting"
+        else
+            echo "❌ ERROR: Failed to access S3 bucket"
+            echo "   Error: $BUCKET_CHECK"
+        fi
+        
+        echo
+        echo "Please fix S3 configuration before proceeding"
+        return 1
+    fi
+    
+    echo
+}
+
 # Check S3 for uploaded files
 check_s3_upload() {
     echo "Checking S3 bucket for uploaded files..."
@@ -207,6 +268,14 @@ main() {
     
     # Run validation steps
     check_env_vars
+    
+    # Test S3 connectivity early to catch configuration issues
+    if ! test_s3_connectivity; then
+        echo "❌ S3 connectivity test failed - please fix configuration issues"
+        echo "   The container will fail to start with invalid S3 configuration"
+        exit 1
+    fi
+    
     check_container
     check_port
     send_test_event
@@ -216,6 +285,7 @@ main() {
     
     echo "=== Validation Summary ==="
     echo "✓ Basic connectivity and functionality verified"
+    echo "✓ S3 bucket configuration validated"
     echo "  For full validation, check S3 bucket for uploaded files"
     echo "  Monitor container logs: docker logs -f xml-listener"
     echo
