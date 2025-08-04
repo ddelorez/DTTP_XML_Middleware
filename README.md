@@ -29,14 +29,15 @@ The middleware is designed to be:
 ## Features
 
 - **TCP Listener**: Accepts XML event streams from Avigilon ACM systems
-- **File Rotation**: Rotates files hourly or at 10MB size limit
-- **S3 Integration**: Uploads files to a specified S3 bucket and prefix
+- **Real-Time File Rotation**: Rotates files every 60 seconds or at 5MB size limit (whichever occurs first)
+- **S3 Integration**: Uploads files to S3 with comprehensive error handling and notifications
 - **Snowflake Compatibility**: Ensures files are well-formed for Snowflake ingestion
 - **JSON Support**: Optional conversion to JSON format for improved query performance
 - **Threading**: Uses background threads for non-blocking operation
 - **Error Handling**: Graceful recovery from connection drops, malformed XML, and upload failures
-- **Logging**: Comprehensive logging for monitoring and troubleshooting
+- **Smart XML Processing**: Automatically strips duplicate XML declarations from ACM events
 - **Event Tracking**: Real-time logging of received XML events with cumulative count tracking
+- **Production Optimized**: Designed for continuous high-volume streams with configurable rate limiting
 
 ## Architecture
 
@@ -154,14 +155,14 @@ The middleware is configured through environment variables:
 | PORT | TCP port to listen on | 8080 | No |
 | BUCKET_NAME | S3 bucket for uploads | - | Yes |
 | PREFIX | S3 key prefix | xml-events/ | No |
-| ROTATION_INTERVAL | File rotation interval in seconds | 3600 | No |
-| MAX_FILE_SIZE | Max file size in bytes | 10485760 (10MB) | No |
+| ROTATION_INTERVAL | File rotation interval in seconds | 60 | No |
+| MAX_FILE_SIZE | Max file size in bytes | 5242880 (5MB) | No |
 | AWS_ACCESS_KEY_ID | AWS access key | - | Yes |
 | AWS_SECRET_ACCESS_KEY | AWS secret key | - | Yes |
 | AWS_REGION | AWS region | - | Yes |
-| OUTPUT_FORMAT | Output format (xml or json) | xml | No |
+| OUTPUT_FORMAT | Output format (xml or json) | json | No |
 | USE_DATE_FOLDERS | Organize files in date-based folders | false | No |
-| PRETTY_PRINT_JSON | Format JSON with indentation | true | No |
+| PRETTY_PRINT_JSON | Format JSON with indentation | false | No |
 
 ### AWS IAM Permissions
 
@@ -201,9 +202,9 @@ The AWS credentials must have the following S3 permissions:
 | BIND_HOST | Interface to bind to | 0.0.0.0 | No |
 | MAX_CONNECTIONS | Maximum concurrent connections | 50 | No |
 | MAX_MESSAGE_SIZE | Maximum message size in bytes | 1048576 (1MB) | No |
-| RATE_LIMIT_ENABLED | Enable rate limiting | true | No |
+| RATE_LIMIT_ENABLED | Enable rate limiting | false | No |
 | RATE_LIMIT_WINDOW | Rate limit window in seconds | 60 | No |
-| RATE_LIMIT_MAX_EVENTS | Max events per window | 1000 | No |
+| RATE_LIMIT_MAX_EVENTS | Max events per window | 10000 | No |
 
 ## Usage
 
@@ -434,9 +435,23 @@ The middleware generates several types of log messages:
 
 - **Event Reception**: `Received XML event from ACM (IP) - Total event count: N`
 - **File Rotation Start**: `Starting file rotation - Total events to upload: N`
+- **Rotation Triggers**:
+  - `Time-based rotation triggered after 60 seconds`
+  - `Size-based rotation triggered: 5,242,880 bytes >= 5,242,880 bytes limit`
 - **Upload Success**: `File rotated and uploaded successfully: filename - Events uploaded: N`
+- **S3 Errors**: Clear error messages with specific remediation steps
+- **XML Validation**: `XML validation successful - found N events in file`
 - **Connection Info**: `Connection from IP (active: N)`
 - **Server Status**: `TCP server stopped - Total events processed in session: N`
+
+### Production Deployment Notes
+
+For production environments handling continuous ACM streams:
+
+1. **Disable Rate Limiting**: Set `RATE_LIMIT_ENABLED=false` for trusted ACM appliances
+2. **Use JSON Output**: Set `OUTPUT_FORMAT=json` for better Snowflake performance
+3. **Real-Time Rotation**: Default 60-second rotation provides near-real-time data availability
+4. **Monitor S3 Errors**: The service will fail fast on S3 misconfiguration with clear error messages
 
 ## Troubleshooting
 

@@ -205,11 +205,15 @@ You should see output like:
 2025-08-01 12:31:02 - INFO - File rotated and uploaded successfully: 20250801_123100.xml - Events uploaded: 25
 ```
 
-**Tip for Testing S3 Uploads:** To trigger file rotation and S3 upload more quickly during testing, set these values in your .env file:
+**Real-Time Business Intelligence Configuration:** The system is optimized for near-real-time data availability:
 ```
-ROTATION_INTERVAL=60        # Rotate every minute instead of hourly
-MAX_FILE_SIZE=10240         # Rotate at 10KB instead of 10MB
+ROTATION_INTERVAL=60        # Rotate every 60 seconds (default)
+MAX_FILE_SIZE=5242880       # Rotate at 5MB (default)
+OUTPUT_FORMAT=json          # Optimized for Snowflake
+RATE_LIMIT_ENABLED=false    # Disable for ACM streams
 ```
+
+Files rotate on whichever condition occurs first (60 seconds OR 5MB).
 
 ### Option 3: Use the Validation Script
 
@@ -267,11 +271,12 @@ Log entries include:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | PORT | TCP listening port | 8080 |
-| ROTATION_INTERVAL | File rotation interval (seconds) | 3600 |
-| MAX_FILE_SIZE | Max file size before rotation (bytes) | 10485760 |
-| OUTPUT_FORMAT | Output format (xml or json) | xml |
+| ROTATION_INTERVAL | File rotation interval (seconds) | 60 |
+| MAX_FILE_SIZE | Max file size before rotation (bytes) | 5242880 (5MB) |
+| OUTPUT_FORMAT | Output format (xml or json) | json |
 | PREFIX | S3 key prefix | xml-events/ |
 | USE_DATE_FOLDERS | Organize files by date (true/false) | false |
+| RATE_LIMIT_ENABLED | Enable rate limiting | false |
 
 ## Docker Compose vs Docker Run
 
@@ -300,21 +305,25 @@ docker logs xml-listener
 # - Missing BUCKET_NAME environment variable
 # - Invalid AWS credentials
 # - S3 bucket doesn't exist or no access
+
+# The service now fails fast with clear S3 error messages:
+# ❌ S3 CONFIGURATION ERROR: Bucket 'name' does not exist!
+# ❌ S3 PERMISSION ERROR: Access denied to bucket 'name'
+# ❌ S3 CONNECTION ERROR: Timeout connecting to S3
 ```
 
 ### No files in S3
 ```bash
-# Check if file rotation has occurred (default is hourly)
-# Force rotation by sending many events or reducing ROTATION_INTERVAL:
-docker run -d \
-  --name xml-listener \
-  -p 8080:8080 \
-  -e BUCKET_NAME=$BUCKET_NAME \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e AWS_REGION=$AWS_REGION \
-  -e ROTATION_INTERVAL=60 \
-  xml-stream-aggregator
+# Files rotate every 60 seconds by default
+# Check rotation logs:
+docker logs xml-listener | grep "rotation triggered"
+
+# You should see:
+# - "Time-based rotation triggered after 60 seconds"
+# - "Size-based rotation triggered: N bytes >= 5,242,880 bytes limit"
+
+# Monitor uploads:
+docker logs xml-listener | grep "uploaded successfully"
 ```
 
 ### Connection refused

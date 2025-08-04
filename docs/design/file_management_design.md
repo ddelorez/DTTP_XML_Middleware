@@ -22,15 +22,19 @@ graph TD
 ## Component Design
 
 ### 1. File Rotation Trigger
-- **Time-based**: Rotate files hourly (configurable via `ROTATION_INTERVAL`, default: 3600 seconds)
-- **Size-based**: Rotate when file size exceeds 10MB (configurable via `MAX_FILE_SIZE`, default: 10MB)
-- **Check Frequency**: Monitor file every 60 seconds for rotation conditions
+- **Time-based**: Rotate files every 60 seconds for real-time BI (configurable via `ROTATION_INTERVAL`, default: 60 seconds)
+- **Size-based**: Rotate when file size exceeds 5MB (configurable via `MAX_FILE_SIZE`, default: 5MB)
+- **Check Frequency**: Monitor file every 10 seconds for rotation conditions (more responsive)
+- **Rotation Logic**: Files rotate on whichever condition is met first (time OR size)
 
 ### 2. Rotation Process
 - **Thread Safety**: Coordinate with TCP server using file locks
-- **XML Wrapping**: Wrap raw XML content in `<EVENTS>` root element
+- **XML Processing**:
+  - Strip individual XML declarations from ACM events (ACM sends one per event)
+  - Wrap raw XML content in `<EVENTS>` root element with single XML declaration
 - **Validation**: Ensure well-formed XML using `xml.etree.ElementTree`
-- **Timestamping**: Generate filenames with UTC timestamps (e.g., `20250729_161500.xml`)
+- **Format Conversion**: Optional conversion to JSON format for Snowflake optimization
+- **Timestamping**: Generate filenames with UTC timestamps (e.g., `20250729_161500.json`)
 - **Cleanup**: Reset `current.xml` and remove temporary files after successful upload
 
 ### 3. Error Handling
