@@ -501,9 +501,9 @@ class FileManager:
         """Initialize file manager with configuration."""
         self.current_file = config.get("CURRENT_FILE", "./current.xml")
         self.temp_file = config.get("TEMP_FILE", "./temp.xml")
-        self.rotation_interval = int(config.get("ROTATION_INTERVAL", 3600))  # 1 hour
-        self.max_file_size = int(config.get("MAX_FILE_SIZE", 10 * 1024 * 1024))  # 10MB
-        self.check_interval = 60  # Check every 60 seconds
+        self.rotation_interval = int(config.get("ROTATION_INTERVAL", 3600))  # Default 1 hour
+        self.max_file_size = int(config.get("MAX_FILE_SIZE", 10 * 1024 * 1024))  # Default 10MB
+        self.check_interval = 10  # Check every 10 seconds for more responsive rotation
         self.file_lock = threading.Lock()
         self.running = False
         self.rotation_thread = None
@@ -541,15 +541,16 @@ class FileManager:
                 rotation_needed = False
                 
                 # Time-based rotation
-                if current_time - last_rotation_time >= self.rotation_interval:
-                    logger.info("Time-based rotation triggered")
+                time_since_rotation = current_time - last_rotation_time
+                if time_since_rotation >= self.rotation_interval:
+                    logger.info(f"Time-based rotation triggered after {time_since_rotation:.0f} seconds")
                     rotation_needed = True
                 
-                # Size-based rotation
+                # Size-based rotation (whichever occurs first)
                 if os.path.exists(self.current_file):
                     file_size = os.path.getsize(self.current_file)
                     if file_size >= self.max_file_size:
-                        logger.info(f"Size-based rotation triggered: {file_size} bytes")
+                        logger.info(f"Size-based rotation triggered: {file_size:,} bytes >= {self.max_file_size:,} bytes limit")
                         rotation_needed = True
                 
                 if rotation_needed:
