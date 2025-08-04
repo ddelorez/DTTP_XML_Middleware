@@ -84,11 +84,12 @@ class TCPServer:
                     try:
                         client_socket, address = self.server_socket.accept()
                         
-                        # Check rate limit
-                        if self.rate_limit_enabled and not self.check_rate_limit(address[0]):
-                            logger.warning(f"Rate limit exceeded for {address[0]}")
-                            client_socket.close()
-                            continue
+                        # Check rate limit (skip for localhost/trusted sources)
+                        if self.rate_limit_enabled and address[0] not in ['127.0.0.1', 'localhost']:
+                            if not self.check_rate_limit(address[0]):
+                                logger.warning(f"Rate limit exceeded for {address[0]} - closing connection")
+                                client_socket.close()
+                                continue
                         
                         # Try to acquire connection semaphore
                         if not self.connection_semaphore.acquire(blocking=False):
@@ -145,6 +146,12 @@ class TCPServer:
                         event_data = message_buffer[:event_end]
                         message_buffer = message_buffer[event_end:]
                         
+                        # Remove XML declaration if present (ACM sends one per event)
+                        if event_data.startswith(b"<?xml"):
+                            xml_decl_end = event_data.find(b"?>")
+                            if xml_decl_end != -1:
+                                event_data = event_data[xml_decl_end + 2:].lstrip()
+                        
                         # Append complete event to current file
                         with self.file_lock:
                             with open(self.current_file, "ab") as f:
@@ -189,7 +196,9 @@ class TCPServer:
             ]
             
             # Check limit
-            if len(self.rate_limiter[ip_address]) >= self.rate_limit_max_events:
+            event_count = len(self.rate_limiter[ip_address])
+            if event_count >= self.rate_limit_max_events:
+                logger.debug(f"Rate limit check: {ip_address} has {event_count} events in {self.rate_limit_window}s window (limit: {self.rate_limit_max_events})")
                 return False
             
             return True
@@ -542,8 +551,8 @@ class FileManager:
                 with open(self.current_file, "rb") as f:
                     content = f.read()
                 
-                # Wrap content in EVENTS tags
-                wrapped_content = b"<EVENTS>\n" + content + b"\n</EVENTS>"
+                # Wrap content in EVENTS tags with XML declaration for valid document
+                wrapped_content = b'<?xml version="1.0" encoding="UTF-8"?>\n<EVENTS>\n' + content + b'\n</EVENTS>'
                 
                 # Write to temp file
                 with open(self.temp_file, "wb") as f:
@@ -551,10 +560,15 @@ class FileManager:
                 
                 # Validate XML
                 try:
-                    ET.parse(self.temp_file)
+                    tree = ET.parse(self.temp_file)
+                    root = tree.getroot()
+                    event_count_in_file = len(root.findall('.//EVENT'))
+                    logger.info(f"XML validation successful - found {event_count_in_file} events in file")
                     is_valid_xml = True
                 except ET.ParseError as e:
                     logger.error(f"XML validation failed: {e}")
+                    # Log first 500 chars of wrapped content for debugging
+                    logger.debug(f"First 500 chars of wrapped content: {wrapped_content[:500]}")
                     is_valid_xml = False
                 
                 # Process according to output format
