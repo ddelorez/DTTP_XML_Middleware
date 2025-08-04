@@ -247,82 +247,105 @@ Refer to the `Reference Docs/XML Events Collaboration.pdf` for detailed setup in
    File rotation logs will show:
    ```
    2025-08-01 13:00:00 - INFO - Starting file rotation - Total events to upload: 150
-   2025-08-01 13:00:02 - INFO - File rotated and uploaded successfully: 20250801_130000.xml - Events uploaded: 150
+   2025-08-01 13:00:02 - INFO - File rotated and uploaded successfully: 20250801_130000.json - Events uploaded: 150
    ```
 
 ## Snowflake Integration
 
-### Setting up Snowflake for XML Data
+The middleware is optimized for Snowflake integration with JSON as the default output format for better performance and simpler querying.
 
-1. Create an S3 stage:
-   ```sql
-   CREATE STAGE my_s3_stage
-   URL = 's3://<BUCKET_NAME>/<PREFIX>'
-   CREDENTIALS = (AWS_KEY_ID = '<key>' AWS_SECRET_KEY = '<secret>')
-   FILE_FORMAT = (TYPE = XML);
-   ```
-
-2. Create a table for the events:
-   ```sql
-   CREATE TABLE xml_events (
-     event_data VARIANT,
-     load_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
-   );
-   ```
-
-3. Set up data ingestion:
-   ```sql
-   COPY INTO xml_events (event_data)
-   FROM @my_s3_stage
-   FILE_FORMAT = (TYPE = XML)
-   ON_ERROR = 'CONTINUE';
-   ```
-
-4. Query the data:
-   ```sql
-   SELECT
-     GET_PATH(PARSE_XML(event_data), 'EVENT/plasectrxEventname')::STRING AS event_name,
-     GET_PATH(PARSE_XML(event_data), 'EVENT/plasectrxRecdate')::TIMESTAMP AS rec_date
-   FROM xml_events
-   WHERE event_name = 'Input point in alarm';
-   ```
-
-### Setting up Snowflake for JSON Data
-
-If using the JSON output format:
+### Setting up Snowflake for JSON Data (Recommended)
 
 1. Create an S3 stage with JSON format:
-   ```sql
-   CREATE STAGE my_json_stage
-   URL = 's3://<BUCKET_NAME>/<PREFIX>'
-   CREDENTIALS = (AWS_KEY_ID = '<key>' AWS_SECRET_KEY = '<secret>')
-   FILE_FORMAT = (TYPE = JSON);
-   ```
+  ```sql
+  CREATE STAGE my_acm_stage
+  URL = 's3://<BUCKET_NAME>/<PREFIX>'
+  CREDENTIALS = (AWS_KEY_ID = '<key>' AWS_SECRET_KEY = '<secret>')
+  FILE_FORMAT = (TYPE = JSON);
+  ```
 
 2. Create a table for the events:
-   ```sql
-   CREATE TABLE json_events (
-     event_data VARIANT,
-     load_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
-   );
-   ```
+  ```sql
+  CREATE TABLE acm_events (
+    event_data VARIANT,
+    load_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+  );
+  ```
 
 3. Set up data ingestion:
-   ```sql
-   COPY INTO json_events (event_data)
-   FROM @my_json_stage
-   FILE_FORMAT = (TYPE = JSON)
-   ON_ERROR = 'CONTINUE';
-   ```
+  ```sql
+  COPY INTO acm_events (event_data)
+  FROM @my_acm_stage
+  FILE_FORMAT = (TYPE = JSON)
+  ON_ERROR = 'CONTINUE';
+  ```
 
-4. Query the data (more efficient than XML):
-   ```sql
-   SELECT
-     event_data:plasectrxEventname::STRING AS event_name,
-     event_data:plasectrxRecdate::TIMESTAMP AS rec_date
-   FROM json_events
-   WHERE event_name = 'Input point in alarm';
-   ```
+4. Query the data:
+  ```sql
+  SELECT
+    event_data:plasectrxEventname::STRING AS event_name,
+    event_data:plasectrxRecdate::TIMESTAMP AS rec_date,
+    event_data:plasectrxSourcename::STRING AS source_name,
+    event_data:plasectrxLname::STRING AS last_name,
+    event_data:plasectrxFname::STRING AS first_name
+  FROM acm_events
+  WHERE event_name = 'Card presented to reader';
+  ```
+
+5. Create a view for easier querying:
+  ```sql
+  CREATE OR REPLACE VIEW acm_events_view AS
+  SELECT
+    event_data:plasectrxEventname::STRING AS event_name,
+    TRY_TO_TIMESTAMP(event_data:plasectrxRecdate::STRING) AS event_time,
+    event_data:plasectrxSourcename::STRING AS source_name,
+    event_data:plasectrxLname::STRING AS last_name,
+    event_data:plasectrxFname::STRING AS first_name,
+    event_data:plasectrxCardnumber::STRING AS card_number,
+    event_data:plasectrxAuxin1::STRING AS aux_info1,
+    event_data:plasectrxAuxin2::STRING AS aux_info2,
+    load_timestamp
+  FROM acm_events;
+  ```
+
+### Setting up Snowflake for XML Data (Alternative)
+
+If you need to use XML format instead of the default JSON:
+
+1. Set `OUTPUT_FORMAT=xml` in your .env file
+
+2. Create an S3 stage for XML:
+  ```sql
+  CREATE STAGE my_acm_xml_stage
+  URL = 's3://<BUCKET_NAME>/<PREFIX>'
+  CREDENTIALS = (AWS_KEY_ID = '<key>' AWS_SECRET_KEY = '<secret>')
+  FILE_FORMAT = (TYPE = XML);
+  ```
+
+3. Create a table for the events:
+  ```sql
+  CREATE TABLE acm_xml_events (
+    event_data VARIANT,
+    load_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+  );
+  ```
+
+4. Set up data ingestion:
+  ```sql
+  COPY INTO acm_xml_events (event_data)
+  FROM @my_acm_xml_stage
+  FILE_FORMAT = (TYPE = XML)
+  ON_ERROR = 'CONTINUE';
+  ```
+
+5. Query the data (more complex than JSON):
+  ```sql
+  SELECT
+    GET_PATH(PARSE_XML(event_data), 'EVENT/plasectrxEventname')::STRING AS event_name,
+    GET_PATH(PARSE_XML(event_data), 'EVENT/plasectrxRecdate')::STRING AS rec_date
+  FROM acm_xml_events
+  WHERE GET_PATH(PARSE_XML(event_data), 'EVENT/plasectrxEventname')::STRING = 'Card presented to reader';
+  ```
 
 ## Security Features
 
