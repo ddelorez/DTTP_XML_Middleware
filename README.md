@@ -77,8 +77,9 @@ graph TD
 The easiest way to get started is with Docker Compose:
 
 ```bash
-git clone https://github.com/your-org/daikin-xml-listener.git
-cd daikin-xml-listener
+git clone https://github.com/ddelorez/DTTP_XML_Middleware.git
+cd DTTP_XML_Middleware
+docker build -t xml-stream-aggregator .
 
 # Copy and edit the environment file
 cp .env.example .env

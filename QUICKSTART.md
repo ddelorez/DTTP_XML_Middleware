@@ -12,8 +12,9 @@ This guide will help you get the Daikin XML Listener middleware up and running q
 ## Step 1: Build the Docker Image
 
 ```bash
-# Clone the repository (or extract the provided files)
-cd "Daikin XML Listener"
+# Clone the repository
+git clone https://github.com/ddelorez/DTTP_XML_Middleware.git
+cd DTTP_XML_Middleware
 
 # Build the Docker image
 docker build -t xml-stream-aggregator .
